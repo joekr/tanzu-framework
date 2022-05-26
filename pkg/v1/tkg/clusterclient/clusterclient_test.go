@@ -2529,6 +2529,62 @@ var _ = Describe("Cluster Client", func() {
 			})
 		})
 	})
+
+	Describe("Unit tests for IsClassyCluster", func() {
+		var isClassyCluster bool
+
+		BeforeEach(func() {
+			reInitialize()
+			kubeConfigPath := getConfigFilePath("config1.yaml")
+			clstClient, err = NewClient(kubeConfigPath, "", clusterClientOptions)
+			Expect(err).NotTo(HaveOccurred())
+		})
+		Context("When clientset Get api return error", func() {
+			JustBeforeEach(func() {
+				clientset.GetReturns(errors.New("fake-error"))
+				isClassyCluster, err = clstClient.IsClassyCluster("fake-clusterName", "fake-namespace")
+			})
+			It("should return an error", func() {
+				Expect(err).To(HaveOccurred())
+				Expect(isClassyCluster).To(Equal(false))
+				Expect(err.Error()).To(ContainSubstring("fake-error"))
+			})
+		})
+		Context("When cluster is not using ClusterClass", func() {
+			JustBeforeEach(func() {
+				clientset.GetCalls(func(ctx context.Context, namespace types.NamespacedName, cluster crtclient.Object) error {
+					topology := &capi.Topology{
+						Class: "",
+					}
+					cluster.(*capi.Cluster).Spec.Topology = topology
+					return nil
+				})
+
+				isClassyCluster, err = clstClient.IsClassyCluster("fake-clusterName", "fake-namespace")
+			})
+			It("should not return an error and isClassyCluster to be false", func() {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(isClassyCluster).To(Equal(false))
+			})
+		})
+		Context("When cluster is using ClusterClass", func() {
+			JustBeforeEach(func() {
+				clientset.GetCalls(func(ctx context.Context, namespace types.NamespacedName, cluster crtclient.Object) error {
+					topology := &capi.Topology{
+						Class: "fake-cluster-class",
+					}
+					cluster.(*capi.Cluster).Spec.Topology = topology
+					return nil
+				})
+				isClassyCluster, err = clstClient.IsClassyCluster("fake-clusterName", "fake-namespace")
+			})
+			It("should not return an error and isClassyCluster to be true", func() {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(isClassyCluster).To(Equal(true))
+			})
+		})
+	})
+
 })
 
 func createTempDirectory() {

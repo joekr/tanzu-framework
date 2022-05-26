@@ -320,6 +320,8 @@ type Client interface {
 	ListCLIPluginResources() ([]cliv1alpha1.CLIPlugin, error)
 	// VerifyCLIPluginCRD returns true if CRD exists else return false
 	VerifyCLIPluginCRD() (bool, error)
+	// IsClassyCluster check whether cluster is ClusterClass based or not
+	IsClassyCluster(clusterName, namespace string) (bool, error)
 }
 
 // PollOptions is options for polling
@@ -2341,6 +2343,18 @@ func (c *client) ListCLIPluginResources() ([]cliv1alpha1.CLIPlugin, error) {
 		return nil, err
 	}
 	return cliPlugins.Items, nil
+}
+
+// IsClassyCluster check whether cluster is ClusterClass based or not
+func (c *client) IsClassyCluster(clusterName, namespace string) (bool, error) {
+	clusterObj := &capi.Cluster{}
+	if err := c.GetResource(clusterObj, clusterName, namespace, nil, nil); err != nil {
+		return false, err
+	}
+	if clusterObj.Spec.Topology.Class == "" {
+		return false, nil
+	}
+	return true, nil
 }
 
 // Options provides way to customize creation of clusterClient

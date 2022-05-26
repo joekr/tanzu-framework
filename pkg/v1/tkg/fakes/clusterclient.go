@@ -553,6 +553,20 @@ type ClusterClient struct {
 		result1 bool
 		result2 error
 	}
+	IsClassyClusterStub        func(string, string) (bool, error)
+	isClassyClusterMutex       sync.RWMutex
+	isClassyClusterArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	isClassyClusterReturns struct {
+		result1 bool
+		result2 error
+	}
+	isClassyClusterReturnsOnCall map[int]struct {
+		result1 bool
+		result2 error
+	}
 	IsClusterRegisteredToTMCStub        func() (bool, error)
 	isClusterRegisteredToTMCMutex       sync.RWMutex
 	isClusterRegisteredToTMCArgsForCall []struct {
@@ -3659,6 +3673,71 @@ func (fake *ClusterClient) HasCEIPTelemetryJobReturnsOnCall(i int, result1 bool,
 	}{result1, result2}
 }
 
+func (fake *ClusterClient) IsClassyCluster(arg1 string, arg2 string) (bool, error) {
+	fake.isClassyClusterMutex.Lock()
+	ret, specificReturn := fake.isClassyClusterReturnsOnCall[len(fake.isClassyClusterArgsForCall)]
+	fake.isClassyClusterArgsForCall = append(fake.isClassyClusterArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.IsClassyClusterStub
+	fakeReturns := fake.isClassyClusterReturns
+	fake.recordInvocation("IsClassyCluster", []interface{}{arg1, arg2})
+	fake.isClassyClusterMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ClusterClient) IsClassyClusterCallCount() int {
+	fake.isClassyClusterMutex.RLock()
+	defer fake.isClassyClusterMutex.RUnlock()
+	return len(fake.isClassyClusterArgsForCall)
+}
+
+func (fake *ClusterClient) IsClassyClusterCalls(stub func(string, string) (bool, error)) {
+	fake.isClassyClusterMutex.Lock()
+	defer fake.isClassyClusterMutex.Unlock()
+	fake.IsClassyClusterStub = stub
+}
+
+func (fake *ClusterClient) IsClassyClusterArgsForCall(i int) (string, string) {
+	fake.isClassyClusterMutex.RLock()
+	defer fake.isClassyClusterMutex.RUnlock()
+	argsForCall := fake.isClassyClusterArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *ClusterClient) IsClassyClusterReturns(result1 bool, result2 error) {
+	fake.isClassyClusterMutex.Lock()
+	defer fake.isClassyClusterMutex.Unlock()
+	fake.IsClassyClusterStub = nil
+	fake.isClassyClusterReturns = struct {
+		result1 bool
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ClusterClient) IsClassyClusterReturnsOnCall(i int, result1 bool, result2 error) {
+	fake.isClassyClusterMutex.Lock()
+	defer fake.isClassyClusterMutex.Unlock()
+	fake.IsClassyClusterStub = nil
+	if fake.isClassyClusterReturnsOnCall == nil {
+		fake.isClassyClusterReturnsOnCall = make(map[int]struct {
+			result1 bool
+			result2 error
+		})
+	}
+	fake.isClassyClusterReturnsOnCall[i] = struct {
+		result1 bool
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *ClusterClient) IsClusterRegisteredToTMC() (bool, error) {
 	fake.isClusterRegisteredToTMCMutex.Lock()
 	ret, specificReturn := fake.isClusterRegisteredToTMCReturnsOnCall[len(fake.isClusterRegisteredToTMCArgsForCall)]
@@ -6603,6 +6682,8 @@ func (fake *ClusterClient) Invocations() map[string][][]interface{} {
 	defer fake.getVCServerMutex.RUnlock()
 	fake.hasCEIPTelemetryJobMutex.RLock()
 	defer fake.hasCEIPTelemetryJobMutex.RUnlock()
+	fake.isClassyClusterMutex.RLock()
+	defer fake.isClassyClusterMutex.RUnlock()
 	fake.isClusterRegisteredToTMCMutex.RLock()
 	defer fake.isClusterRegisteredToTMCMutex.RUnlock()
 	fake.isPacificRegionalClusterMutex.RLock()
