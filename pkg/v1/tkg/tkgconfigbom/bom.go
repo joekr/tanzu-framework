@@ -64,6 +64,7 @@ func (c *client) GetDefaultTkgBOMConfiguration() (*BOMConfiguration, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to find default TKG BOM file")
 	}
+	fmt.Println(bomFilePath)
 	return c.loadBOMConfiguration(bomFilePath)
 }
 

@@ -665,3 +665,16 @@ boms:
     #@ for/end file in [ f for f in files if f.startswith("tkg-bom") or  f.startswith("tkr-bom") or f.startswith("bom")]:
     - bom_name: #@ file
       bom_data: #@ yaml.decode(data.read(file))
+
+#! ---------------------------------------------------------------------
+#! Settings for OCI infrastructure provider
+#! ---------------------------------------------------------------------
+OCI_CONTROL_PLANE_MACHINE_TYPE: "VM.Standard.E4.Flex"
+OCI_CONTROL_PLANE_MACHINE_TYPE_OCPUS: "1"
+OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION: true
+OCI_NODE_MACHINE_TYPE: "VM.Standard.E4.Flex"
+OCI_NODE_MACHINE_TYPE_OCPUS: "1"
+OCI_NODE_PV_TRANSIT_ENCRYPTION: true
+OCI_IMAGE_ID:
+OCI_COMPARTMENT_ID:
+OCI_SSH_KEY: 

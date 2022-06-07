@@ -1,0 +1,13 @@
+(@ def oci_conf(values): -@)
+useInstancePrincipals: true
+
+compartment: "(@=values.ocicpi.compartment @)"
+
+loadBalancer:
+  disabled: true
+rateLimiter:
+  rateLimitQPSRead: 20.0
+  rateLimitBucketRead: 5
+  rateLimitQPSWrite: 20.0
+  rateLimitBucketWrite: 5
+(@ end -@)

@@ -1,0 +1,180 @@
+#@ load("@ytt:overlay", "overlay")
+#@ load("@ytt:data", "data")
+#@ load("lib/helpers.star", "get_bom_data_for_tkr_name", "kubeadm_image_repo")
+#@ load("lib/validate.star", "validate_configuration")
+
+#@ validate_configuration("oci")
+
+#@ bomDataForK8sVersion = get_bom_data_for_tkr_name()
+
+#@overlay/match by=overlay.subset({"kind":"Cluster"})
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: #@ data.values.CLUSTER_NAME
+  labels:
+    #@overlay/match missing_ok=True
+    #@yaml/text-templated-strings
+    #@ if data.values.TKG_CLUSTER_ROLE != "workload":
+    cluster-role.tkg.tanzu.vmware.com/(@= data.values.TKG_CLUSTER_ROLE @): ""
+    #@ end
+    tkg.tanzu.vmware.com/cluster-name: #@ data.values.CLUSTER_NAME
+    #@overlay/match missing_ok=True
+    tanzuKubernetesRelease: #@ data.values.KUBERNETES_RELEASE
+spec:
+  infrastructureRef:
+    name: #@ data.values.CLUSTER_NAME
+  controlPlaneRef:
+    name: #@ "{}-control-plane".format(data.values.CLUSTER_NAME)
+  clusterNetwork:
+    #@ if data.values.CLUSTER_API_SERVER_PORT:
+    #@overlay/match missing_ok=True
+    apiServerPort: #@ data.values.CLUSTER_API_SERVER_PORT
+    #@ end
+    pods:
+      cidrBlocks:
+        #@overlay/match by=overlay.index(0)
+        - #@ data.values.CLUSTER_CIDR
+    services:
+      cidrBlocks:
+        #@overlay/match by=overlay.index(0)
+        - #@ data.values.SERVICE_CIDR
+
+#@overlay/match by=overlay.subset({"kind":"KubeadmControlPlane"})
+---
+kind: KubeadmControlPlane
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+metadata:
+  name: #@ "{}-control-plane".format(data.values.CLUSTER_NAME)
+spec:
+  replicas: #@ data.values.CONTROL_PLANE_MACHINE_COUNT
+  machineTemplate:
+    infrastructureRef:
+      kind: OCIMachineTemplate
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+      name: #@ "{}-control-plane".format(data.values.CLUSTER_NAME)
+  kubeadmConfigSpec:
+    initConfiguration:
+      nodeRegistration:
+        criSocket: /var/run/containerd/containerd.sock
+        kubeletExtraArgs:
+          cloud-provider: external
+          provider-id: oci://{{ ds["id"] }}
+    clusterConfiguration:
+      imageRepository: #@ kubeadm_image_repo(bomDataForK8sVersion.kubeadmConfigSpec.imageRepository)
+      etcd:
+        local:
+          imageRepository: #@ kubeadm_image_repo(bomDataForK8sVersion.kubeadmConfigSpec.etcd.local.imageRepository)
+          imageTag: #@ bomDataForK8sVersion.kubeadmConfigSpec.etcd.local.imageTag
+          #@ if getattr(bomDataForK8sVersion.kubeadmConfigSpec.etcd.local, "extraArgs", None) != None:
+          #@overlay/match missing_ok=True
+          extraArgs:
+            #@ for key in bomDataForK8sVersion.kubeadmConfigSpec.etcd.local["extraArgs"]:
+            #@overlay/match missing_ok=True
+            #@yaml/text-templated-strings
+            (@= key @): #@ "{}".format(bomDataForK8sVersion.kubeadmConfigSpec.etcd.local["extraArgs"][key]).lower()
+            #@ end
+          #@ end
+      dns:
+        imageRepository: #@ kubeadm_image_repo(bomDataForK8sVersion.kubeadmConfigSpec.dns.imageRepository)
+        imageTag: #@ bomDataForK8sVersion.kubeadmConfigSpec.dns.imageTag
+      networking: {}
+      scheduler: {}
+    joinConfiguration:
+      nodeRegistration:
+        criSocket: /var/run/containerd/containerd.sock
+        kubeletExtraArgs:
+          cloud-provider: external
+          provider-id: oci://{{ ds["id"] }}
+  version: #@ data.values.KUBERNETES_VERSION
+
+#@overlay/match by=overlay.subset({"kind":"OCICluster"})
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OCICluster
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: #@ data.values.CLUSTER_NAME
+  name: #@ data.values.CLUSTER_NAME
+spec:
+  compartmentId: #@ data.values.OCI_COMPARTMENT_ID
+  networkSpec:
+    vcn:
+      name: #@ "{}-test-vcn".format(data.values.CLUSTER_NAME)
+
+#@overlay/match by=overlay.subset({"kind": "OCIMachineTemplate", "metadata":{"name": "${CLUSTER_NAME}-control-plane"}})
+---
+kind: OCIMachineTemplate
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+metadata:
+  name: #@ "{}-control-plane".format(data.values.CLUSTER_NAME)
+spec:
+  template:
+    spec:
+      imageId: #@ data.values.OCI_IMAGE_ID
+      compartmentId: #@ data.values.OCI_COMPARTMENT_ID
+      shape: #@ data.values.OCI_CONTROL_PLANE_MACHINE_TYPE
+      shapeConfig:
+        ocpus: #@ data.values.OCI_CONTROL_PLANE_MACHINE_TYPE_OCPUS
+      metadata:
+        ssh_authorized_keys: #@ data.values.OCI_SSH_KEY
+      isPvEncryptionInTransitEnabled: #@ data.values.OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION
+
+#@overlay/match by=overlay.subset({"kind": "OCIMachineTemplate", "metadata":{"name": "${CLUSTER_NAME}-md-0"}})
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OCIMachineTemplate
+metadata:
+  name: #@ "{}-md-0".format(data.values.CLUSTER_NAME)
+spec:
+  template:
+    spec:
+      imageId: #@ data.values.OCI_IMAGE_ID
+      compartmentId: #@ data.values.OCI_COMPARTMENT_ID
+      shape: #@ data.values.OCI_NODE_MACHINE_TYPE
+      shapeConfig:
+        ocpus: #@ data.values.OCI_NODE_MACHINE_TYPE_OCPUS
+      metadata:
+        ssh_authorized_keys: #@ data.values.OCI_SSH_KEY
+      isPvEncryptionInTransitEnabled: #@ data.values.OCI_NODE_PV_TRANSIT_ENCRYPTION
+
+#@overlay/match by=overlay.subset({"kind":"KubeadmConfigTemplate", "metadata":{"name": "${CLUSTER_NAME}-md-0"}})
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: #@ "{}-md-0".format(data.values.CLUSTER_NAME)
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            cloud-provider: external
+            provider-id: oci://{{ ds["id"] }}
+
+#@overlay/match by=overlay.subset({"kind":"MachineDeployment", "metadata":{"name": "${CLUSTER_NAME}-md-0"}})
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: #@ "{}-md-0".format(data.values.CLUSTER_NAME)
+spec:
+  clusterName: #@ data.values.CLUSTER_NAME
+  replicas: #@ data.values.WORKER_MACHINE_COUNT_0
+  selector:
+    matchLabels: null
+  template:
+    spec:
+      clusterName: #@ data.values.CLUSTER_NAME
+      version: #@ data.values.KUBERNETES_VERSION
+      bootstrap:
+        configRef:
+          name: #@ "{}-md-0".format(data.values.CLUSTER_NAME)
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+      infrastructureRef:
+        name: #@ "{}-md-0".format(data.values.CLUSTER_NAME)
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: OCIMachineTemplate

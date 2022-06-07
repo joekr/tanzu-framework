@@ -97,6 +97,10 @@ func (c *client) getImageMapForConfigFile() (map[string]imageForConfigFile, erro
 			"cluster-api-provider-azure",
 			"capzControllerImage",
 		},
+		"infrastructure-oci": {
+			"cluster-api-provider-oci",
+			"capociControllerImage",
+		},
 	}
 
 	defaultBaseRepositoryForClusterAPI := baseImageRepository + "/cluster-api"

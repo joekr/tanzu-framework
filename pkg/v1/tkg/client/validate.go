@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/vmware-tanzu/tanzu-framework/pkg/v1/tkg/oci"
 	capvv1beta1 "sigs.k8s.io/cluster-api-provider-vsphere/apis/v1beta1"
 	clusterctlclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
 
@@ -262,6 +263,17 @@ func (c *TkgClient) ConfigureAndValidateAzureConfig(tkrVersion string, nodeSizes
 	}
 
 	workerCounts, err := c.DistributeMachineDeploymentWorkers(workerMachineCount, isProdConfig, isManagementCluster, "azure", false)
+	if err != nil {
+		return errors.Wrapf(err, "failed to distribute machine deployments")
+	}
+	c.SetMachineDeploymentWorkerCounts(workerCounts, workerMachineCount, isProdConfig)
+	return nil
+}
+
+// ConfigureAndValidateOCIConfig configures and validates OCI configuration
+func (c *TkgClient) ConfigureAndValidateOCIConfig(tkrVersion string, nodeSizes NodeSizeOptions, skipValidation, isProdConfig bool, workerMachineCount int64, clusterClient clusterclient.Client, isManagementCluster bool) error {
+	c.SetProviderType(OCIProviderName)
+	workerCounts, err := c.DistributeMachineDeploymentWorkers(workerMachineCount, isProdConfig, isManagementCluster, "oci", false)
 	if err != nil {
 		return errors.Wrapf(err, "failed to distribute machine deployments")
 	}
@@ -1615,6 +1627,67 @@ func (c *TkgClient) configureVsphereCredentialsFromCluster(clusterClient cluster
 	return nil
 }
 
+func (c *TkgClient) configureOCICredentialsFromCluster(clusterClient clusterclient.Client) error {
+	log.V(6).Infof("validating and setting oci credentials")
+	var creds oci.Credentials
+	if clusterClient != nil {
+		// TODO
+	} else {
+		tenancyID, err := c.TKGConfigReaderWriter().Get(constants.ConfigVariableOCITenancyID)
+		if err != nil {
+			return errors.Errorf("failed to get OCI trnancy id")
+		}
+
+		userID, err := c.TKGConfigReaderWriter().Get(constants.ConfigVariableOCIUserID)
+		if err != nil {
+			return errors.Errorf("failed to get OCI user id")
+		}
+
+		region, err := c.TKGConfigReaderWriter().Get(constants.ConfigVariableOCIRegion)
+		if err != nil {
+			return errors.Errorf("failed to get OCI region")
+		}
+
+		fingerprint, err := c.TKGConfigReaderWriter().Get(constants.ConfigVariableOCICredentialsFingerprint)
+		if err != nil {
+			return errors.Errorf("failed to get OCI credentials fingerprint")
+		}
+
+		passphrase, err := c.TKGConfigReaderWriter().Get(constants.ConfigVariableOCICredentialsPassphrase)
+		if err != nil {
+			return errors.Errorf("failed to get OCI credentials Passphrase")
+		}
+
+		privateKey, err := c.TKGConfigReaderWriter().Get(constants.ConfigVariableOCICredentialsKey)
+		if err != nil {
+			return errors.Errorf("failed to get OCI credentials key")
+		}
+
+		key, err := ReadFile(privateKey)
+
+		if err != nil {
+			return errors.Errorf("failed to read OCI credentials key file")
+		}
+
+		creds = oci.Credentials{
+			TenancyID:              tenancyID,
+			UserID:                 userID,
+			Region:                 region,
+			CredentialsFingerprint: fingerprint,
+			CredentialsKey:         passphrase,
+			CredentialsPassphrase:  key,
+		}
+	}
+	c.TKGConfigReaderWriter().Set(constants.ConfigVariableOCITenancyIDB64, base64.StdEncoding.EncodeToString([]byte(creds.TenancyID)))
+	c.TKGConfigReaderWriter().Set(constants.ConfigVariableOCIUserIDB64, base64.StdEncoding.EncodeToString([]byte(creds.UserID)))
+	c.TKGConfigReaderWriter().Set(constants.ConfigVariableOCIRegionB64, base64.StdEncoding.EncodeToString([]byte(creds.Region)))
+	c.TKGConfigReaderWriter().Set(constants.ConfigVariableOCICredentialsFingerprintB64, base64.StdEncoding.EncodeToString([]byte(creds.CredentialsFingerprint)))
+	c.TKGConfigReaderWriter().Set(constants.ConfigVariableOCICredentialsPassphraseB64, base64.StdEncoding.EncodeToString([]byte(creds.CredentialsPassphrase)))
+	c.TKGConfigReaderWriter().Set(constants.ConfigVariableOCICredentialsKeyB64, base64.StdEncoding.EncodeToString([]byte(creds.CredentialsFingerprint)))
+
+	return nil
+}
+
 // CheckClusterNameFormat ensures that the cluster name is valid for the given provider
 func CheckClusterNameFormat(clusterName, infrastructureProvider string) error {
 	var clusterNameRegex string
@@ -1958,4 +2031,12 @@ func customNetworkSeparationFeatureFlagError(configVariable, value, flagName str
 		configVariable,
 		value,
 		flagName)
+}
+
+func ReadFile(path string) (string, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(b), err
 }

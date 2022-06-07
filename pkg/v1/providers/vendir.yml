@@ -26,3 +26,11 @@ directories:
       ref: f74f471e03ed2d026fbf8083c245b01f659602e8
     includePaths:
     - addons/packages/kapp-controller/0.34.0/bundle/config/**/*
+- path: ytt/vendir/kapp-controller/_ytt_lib
+  contents:
+    - path: .
+      git:
+        url: git@github.com:vmware-tanzu/community-edition.git
+        ref: f74f471e03ed2d026fbf8083c245b01f659602e8
+      includePaths:
+        - addons/packages/kapp-controller/0.34.0/bundle/config/**/* 

@@ -1,0 +1,8 @@
+#@ load("@ytt:assert", "assert")
+#@ load("@ytt:data", "data")
+#@ load("@ytt:ip", "ip")
+
+#@ def oci_cpi_data_values():
+ocicpi:
+  compartment: #@ data.values.OCI_COMPARTMENT_ID
+#@ end

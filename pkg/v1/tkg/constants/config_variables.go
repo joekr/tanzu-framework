@@ -100,6 +100,19 @@ const (
 	ConfigVariableAzureNodeMachineType        = "AZURE_NODE_MACHINE_TYPE"
 	ConfigVariableAzureEnvironment            = "AZURE_ENVIRONMENT"
 
+	ConfigVariableOCITenancyID                 = "OCI_TENANCY_ID"
+	ConfigVariableOCIUserID                    = "OCI_USER_ID"
+	ConfigVariableOCIRegion                    = "OCI_REGION"
+	ConfigVariableOCICredentialsFingerprint    = "OCI_CREDENTIALS_FINGERPRINT"
+	ConfigVariableOCICredentialsKey            = "OCI_CREDENTIALS_KEY"
+	ConfigVariableOCICredentialsPassphrase     = "OCI_CREDENTIALS_PASSPHRASE"
+	ConfigVariableOCITenancyIDB64              = "OCI_TENANCY_ID_B64"
+	ConfigVariableOCIUserIDB64                 = "OCI_USER_ID_B64"
+	ConfigVariableOCIRegionB64                 = "OCI_REGION_B64"
+	ConfigVariableOCICredentialsFingerprintB64 = "OCI_CREDENTIALS_FINGERPRINT_B64"
+	ConfigVariableOCICredentialsKeyB64         = "OCI_CREDENTIALS_KEY_B64"
+	ConfigVariableOCICredentialsPassphraseB64  = "OCI_CREDENTIALS_PASSPHRASE_B64"
+
 	ConfigVariableDockerMachineTemplateImage = "DOCKER_MACHINE_TEMPLATE_IMAGE"
 
 	ConfigVariablePinnipedSupervisorIssuerURL          = "SUPERVISOR_ISSUER_URL"
